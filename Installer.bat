@@ -12,7 +12,7 @@ if not exist %INSTALL_DIR% mkdir %INSTALL_DIR%
 echo Downloading extractor.py...
 powershell -Command "(New-Object System.Net.WebClient).DownloadFile('https://github.com/reganktn/ketzipper/raw/refs/heads/main/extractor.py', '%INSTALL_DIR%\extractor.py')" || (echo Failed to download extractor.py & pause & exit /b)
 
-:: Download UnRar.exe
+:: Download UnRar.exe for extracting RAR files
 echo Downloading UnRar.exe...
 powershell -Command "(New-Object System.Net.WebClient).DownloadFile('https://github.com/reganktn/ketzipper/raw/refs/heads/main/UnRAR.exe', '%INSTALL_DIR%\UnRar.exe')" || (echo Failed to download UnRar.exe & pause & exit /b)
 
@@ -20,29 +20,52 @@ powershell -Command "(New-Object System.Net.WebClient).DownloadFile('https://git
 echo Downloading zipper.py...
 powershell -Command "(New-Object System.Net.WebClient).DownloadFile('https://github.com/reganktn/ketzipper/raw/refs/heads/main/zipper.py', '%INSTALL_DIR%\zipper.py')" || (echo Failed to download zipper.py & pause & exit /b)
 
+:: Download Rar.exe for creating RAR files
+echo Downloading Rar.exe...
+powershell -Command "(New-Object System.Net.WebClient).DownloadFile('https://github.com/reganktn/ketzipper/raw/refs/heads/main/Rar.exe', '%INSTALL_DIR%\Rar.exe')" || (echo Failed to download Rar.exe & pause & exit /b)
+
+:: Find Python executable path automatically
+for /f "delims=" %%i in ('where python') do (
+    set PYTHON_PATH=%%i
+    if not defined FOUND_PYTHON (
+        set FOUND_PYTHON=1
+        goto :found_python
+    )
+)
+
+:found_python
+
+:: Check if Python was found
+if "%PYTHON_PATH%"=="" (
+    echo Python is not installed or not added to the system path. Please install Python first.
+    pause
+    exit /b
+)
+
+:: Check if the Python path is from the Microsoft Store and adjust
+echo Checking for Python version...
+if /I "%PYTHON_PATH%"=="C:\Users\Ixchel\AppData\Local\Microsoft\WindowsApps\python.exe" (
+    echo Found Microsoft Store Python, using the other version...
+    set PYTHON_PATH=C:\Python313\python.exe
+)
+
 :: Install Python dependencies
 echo Installing Python dependencies...
-python -m pip install tk rarfile zipfile || (echo Failed to install dependencies & pause & exit /b)
+"%PYTHON_PATH%" -m pip install tk rarfile || (echo Failed to install dependencies & pause & exit /b)
 
-:: Add context menu entry for .zip files
-echo Adding context menu entry for .zip files...
-reg add "HKEY_CLASSES_ROOT\.zip\shell\KetZipper" /ve /d "Extract with KetZipper" /f
-reg add "HKEY_CLASSES_ROOT\.zip\shell\KetZipper\command" /ve /d "\"C:\KetZipper\extractor.py\" \"%%1\"" /f
+:: Add "KetZipper" main context menu
+echo Adding KetZipper to context menu...
+reg add "HKEY_CLASSES_ROOT\*\shell\KetExtractor" /ve /d "KetExtractor (Extract)" /f
+reg add "HKEY_CLASSES_ROOT\*\shell\KetExtractor\command" /ve /d "\"%PYTHON_PATH%\" \"C:\KetZipper\extractor.py\" \"%%1\"" /f
 
-:: Add context menu entry for .rar files
-echo Adding context menu entry for .rar files...
-reg add "HKEY_CLASSES_ROOT\.rar\shell\KetZipper" /ve /d "Extract with KetZipper" /f
-reg add "HKEY_CLASSES_ROOT\.rar\shell\KetZipper\command" /ve /d "\"C:\KetZipper\extractor.py\" \"%%1\"" /f
+reg add "HKEY_CLASSES_ROOT\*\shell\KetZipper" /ve /d "KetZipper (Create Archive)" /f
+reg add "HKEY_CLASSES_ROOT\*\shell\KetZipper\command" /ve /d "\"%PYTHON_PATH%\" \"C:\KetZipper\zipper.py\" \"%%1\"" /f
 
-:: Add context menu entry for creating an archive
-echo Adding context menu entry for Create Archive...
-reg add "HKEY_CLASSES_ROOT\*\shell\CreateArchive" /ve /d "Create archive with KetZipper" /f
-reg add "HKEY_CLASSES_ROOT\*\shell\CreateArchive\command" /ve /d "\"C:\KetZipper\zipper.py\" \"%%1\"" /f
+reg add "HKEY_CLASSES_ROOT\Directory\shell\KetExtractor" /ve /d "KetExtractor (Extract)" /f
+reg add "HKEY_CLASSES_ROOT\Directory\shell\KetExtractor\command" /ve /d "\"%PYTHON_PATH%\" \"C:\KetZipper\extractor.py\" \"%%1\"" /f
 
-:: Add context menu entry for directories
-echo Adding context menu entry for folders...
-reg add "HKEY_CLASSES_ROOT\Directory\shell\CreateArchive" /ve /d "Create archive with KetZipper" /f
-reg add "HKEY_CLASSES_ROOT\Directory\shell\CreateArchive\command" /ve /d "\"C:\KetZipper\zipper.py\" \"%%1\"" /f
+reg add "HKEY_CLASSES_ROOT\Directory\shell\KetZipper" /ve /d "KetZipper (Create Archive)" /f
+reg add "HKEY_CLASSES_ROOT\Directory\shell\KetZipper\command" /ve /d "\"%PYTHON_PATH%\" \"C:\KetZipper\zipper.py\" \"%%1\"" /f
 
 echo KetZipper installed successfully!
 pause
